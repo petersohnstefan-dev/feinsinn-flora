@@ -9,7 +9,7 @@ st.set_page_config(page_title="Feinsinn & Flora", page_icon="🌿")
 api_key = st.secrets["GEMINI_API_KEY"]
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 st.title("🌿 Feinsinn & Flora")
 st.write("Lade dein Foto hoch für eine exklusive Design-Analyse.")
