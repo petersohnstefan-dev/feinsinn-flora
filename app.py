@@ -1,28 +1,48 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import os
 
-st.set_page_config(page_title="Feinsinn & Flora", page_icon="🌿")
+st.set_page_config(page_title="Feinsinn & Flora Debug", page_icon="🌿")
 
-# Wir holen uns den Key sicher aus den "Secrets" von Streamlit (erkläre ich gleich)
-api_key = st.secrets["GEMINI_API_KEY"]
+# 1. Key laden
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=api_key)
+except Exception as e:
+    st.error(f"Schlüssel-Fehler: {e}")
+    st.stop()
 
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+st.title("🌿 Feinsinn & Flora: Diagnose-Modus")
 
-st.title("🌿 Feinsinn & Flora")
-st.write("Lade dein Foto hoch für eine exklusive Design-Analyse.")
+# 2. Verfügbare Modelle prüfen (Das löst das Rätsel)
+st.sidebar.write("### Verfügbare Modelle:")
+try:
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    st.sidebar.json(available_models)
+    # Wir nehmen automatisch das erste Flash-Modell, das wir finden
+    default_model = next((m for m in available_models if 'flash' in m), available_models[0])
+except Exception as e:
+    st.sidebar.error(f"Modell-Liste fehlgeschlagen: {e}")
+    default_model = "gemini-1.5-flash" # Fallback
 
-uploaded_file = st.file_uploader("Wähle ein Gartenfoto...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Foto hochladen...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, use_column_width=True)
     
-    if st.button('Garten-Potenzial analysieren'):
-        with st.spinner('KI-Gärtner bei der Arbeit...'):
-            prompt = "Analysiere dieses Bild als Garten-Designer. Wo passen Lichtakzente? Welche Holz-Elemente von 'Feinsinn' würden hier harmonieren?"
-            response = model.generate_content([prompt, image])
-            st.markdown("### ✨ Dein Design-Vorschlag:")
-            st.write(response.text)
+    # Modell-Auswahl für dich zum Testen
+    selected_model_name = st.selectbox("Wähle ein Modell aus:", available_models, index=available_models.index(default_model) if default_model in available_models else 0)
+    
+    if st.button('Analyse starten'):
+        try:
+            model = genai.GenerativeModel(selected_model_name)
+            prompt = "Du bist Garten-Designer. Gib 3 kurze Tipps zu Licht und Holz für diesen Garten."
+            
+            with st.spinner(f'Nutze Modell: {selected_model_name}...'):
+                response = model.generate_content([prompt, image])
+                st.success("Erfolg!")
+                st.write(response.text)
+        except Exception as e:
+            st.error(f"Fehler bei der Generierung: {e}")
+            st.info("Tipp: Wenn 'NotFound' erscheint, versuche ein anderes Modell aus der Liste oben links.")
